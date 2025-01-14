@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+*.env
+.env.local
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data — exclude large raw Parquet files from version control if needed
+# Uncomment the lines below to track only CSVs and exclude Parquet:
+# *.parquet
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Outputs (HTML figures — large files)
+civic-youtube-audit/outputs/*.html

@@ -1,0 +1,21 @@
+# Core data stack
+pandas>=2.1.0
+numpy>=1.26.0
+pyarrow>=14.0.0          # Parquet read/write
+
+# YouTube API
+google-api-python-client>=2.100.0
+
+# Sentiment analysis
+vaderSentiment>=3.3.2
+
+# Transformer-based sentiment (optional — comment out if no GPU)
+transformers>=4.38.0
+torch>=2.2.0
+
+# Visualisation
+plotly>=5.18.0
+
+# Utilities
+python-dotenv>=1.0.0     # Load .env files for API keys
+tqdm>=4.66.0             # Progress bars for long scrapes
