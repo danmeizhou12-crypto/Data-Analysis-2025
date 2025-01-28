@@ -283,3 +283,71 @@ class YouTubeClient:
         logger.info(f"Saved → {videos_path}, {comments_path}")
 
         return videos_df, comments_df
+
+
+# ---------------------------------------------------------------------------
+# Recommendation crawl (algorithm audit)
+# ---------------------------------------------------------------------------
+class RecommendationCrawler:
+    """
+    Captures YouTube's recommendation trajectory for a seed video.
+
+    Used for algorithmic bias audits: given a seed civic video, follow
+    the 'Up Next' recommendation chain to document what the algorithm
+    surfaces (or suppresses) for a simulated user persona.
+
+    Parameters
+    ----------
+    client : YouTubeClient
+        Authenticated API client.
+    depth : int
+        Number of recommendation hops to follow (default: 5).
+    """
+
+    def __init__(self, client: "YouTubeClient", depth: int = 5):
+        self.client = client
+        self.depth = depth
+
+    def crawl(self, seed_video_id: str, persona_label: str = "general") -> pd.DataFrame:
+        """
+        Perform a recommendation crawl from a seed video.
+
+        Returns a DataFrame of video metadata at each hop with hop index
+        and persona label for downstream audit comparison.
+        """
+        records = []
+        current_id = seed_video_id
+
+        for hop in range(self.depth):
+            resp = (
+                self.client.youtube.search()
+                .list(
+                    relatedToVideoId=current_id,
+                    type="video",
+                    part="id,snippet",
+                    maxResults=1,
+                )
+                .execute()
+            )
+            items = resp.get("items", [])
+            if not items:
+                logger.info(f"No related video found at hop {hop}. Stopping.")
+                break
+
+            item = items[0]
+            next_id = item["id"]["videoId"]
+            records.append(
+                {
+                    "hop": hop + 1,
+                    "seed_video_id": seed_video_id,
+                    "recommended_video_id": next_id,
+                    "recommended_title": item["snippet"].get("title"),
+                    "recommended_channel": item["snippet"].get("channelTitle"),
+                    "persona": persona_label,
+                    "crawled_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            current_id = next_id
+            time.sleep(QUOTA_SLEEP_SECONDS)
+
+        return pd.DataFrame(records)
