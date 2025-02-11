@@ -261,3 +261,37 @@ def add_engagement_metrics(videos_df: pd.DataFrame) -> pd.DataFrame:
         df["like_count"] / df["comment_count"].replace(0, np.nan)
     ).round(4)
     return df
+
+
+# ---------------------------------------------------------------------------
+# Civic keyword tagger
+# ---------------------------------------------------------------------------
+CIVIC_KEYWORD_GROUPS = {
+    "policy": [
+        "budget", "tax", "carbon", "healthcare", "housing", "immigration",
+        "climate", "election", "policy", "parliament", "senate", "federal",
+        "provincial", "legislation", "bill", "reform",
+    ],
+    "identity": [
+        "indigenous", "francophone", "anglophone", "minority", "rights",
+        "gender", "diversity", "equity", "inclusion", "bilingual",
+    ],
+    "sentiment_signal": [
+        "shame", "proud", "disgusting", "inspiring", "corrupt", "honest",
+        "misleading", "transparent", "outrage", "hope",
+    ],
+}
+
+
+def tag_civic_keywords(df: pd.DataFrame, text_col: str = "text_clean") -> pd.DataFrame:
+    """
+    Flag comments that contain keywords from each civic category.
+
+    Adds boolean columns: ``kw_policy``, ``kw_identity``, ``kw_sentiment_signal``.
+    Useful for downstream topic-stratified sentiment analysis.
+    """
+    df = df.copy()
+    for group, keywords in CIVIC_KEYWORD_GROUPS.items():
+        pattern = r"\b(" + "|".join(keywords) + r")\b"
+        df[f"kw_{group}"] = df[text_col].str.contains(pattern, case=False, na=False, regex=True)
+    return df
