@@ -336,3 +336,53 @@ def render_all(
     )
     logger.info(f"All figures saved to {output_dir}/")
     return figures
+
+
+# ---------------------------------------------------------------------------
+# 7. Civic keyword co-occurrence heatmap
+# ---------------------------------------------------------------------------
+def plot_keyword_sentiment_heatmap(
+    comments_df: pd.DataFrame,
+    output_path: str = "outputs/keyword_sentiment_heatmap.html",
+) -> go.Figure:
+    """
+    Heatmap of mean VADER compound score per civic keyword group × channel.
+
+    Reveals whether policy-tagged comments are more polarised than
+    identity-tagged ones, broken down by channel.
+    """
+    kw_cols = [c for c in comments_df.columns if c.startswith("kw_")]
+    if not kw_cols:
+        logger.warning("No kw_ columns found. Run tag_civic_keywords() first.")
+        return go.Figure()
+
+    rows = []
+    for col in kw_cols:
+        label = col.replace("kw_", "").replace("_", " ").title()
+        subset = comments_df[comments_df[col] == True]
+        if subset.empty:
+            continue
+        for channel, grp in subset.groupby("channel_title"):
+            rows.append(
+                {
+                    "keyword_group": label,
+                    "channel_title": channel,
+                    "mean_sentiment": grp["vader_compound"].mean().round(4),
+                }
+            )
+
+    heat_df = pd.DataFrame(rows)
+    pivot = heat_df.pivot(index="keyword_group", columns="channel_title", values="mean_sentiment")
+
+    fig = px.imshow(
+        pivot,
+        color_continuous_scale="RdYlGn",
+        color_continuous_midpoint=0,
+        title="Mean Sentiment by Civic Keyword Group × Channel",
+        labels=dict(color="Mean VADER Compound"),
+        text_auto=".3f",
+        aspect="auto",
+    )
+    fig.update_layout(**LAYOUT_BASE)
+    _save(fig, output_path)
+    return fig
