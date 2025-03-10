@@ -258,3 +258,27 @@ def top_comments(
     subset = df[df["ensemble_label"] == label].copy()
     ascending = label == "negative"
     return subset.nsmallest(n, score_col) if ascending else subset.nlargest(n, score_col)
+
+
+# ---------------------------------------------------------------------------
+# Language-stratified summary (EN vs. FR)
+# ---------------------------------------------------------------------------
+def sentiment_by_language(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Sentiment summary stratified by channel and detected language.
+
+    Convenience wrapper around sentiment_summary() for the Canadian
+    bilingual civic context — produces EN vs. FR breakdowns per channel
+    in a single call.
+
+    Returns
+    -------
+    DataFrame with columns: channel_title, language_detected,
+    total_comments, mean_compound, std_compound,
+    positive_pct, neutral_pct, negative_pct.
+    """
+    if "language_detected" not in df.columns:
+        raise ValueError(
+            "language_detected column missing. Run CommentCleaner.clean() first."
+        )
+    return sentiment_summary(df, group_by=["channel_title", "language_detected"])
