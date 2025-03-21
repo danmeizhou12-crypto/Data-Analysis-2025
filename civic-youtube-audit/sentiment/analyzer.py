@@ -282,3 +282,66 @@ def sentiment_by_language(df: pd.DataFrame) -> pd.DataFrame:
             "language_detected column missing. Run CommentCleaner.clean() first."
         )
     return sentiment_summary(df, group_by=["channel_title", "language_detected"])
+
+
+# ---------------------------------------------------------------------------
+# Temporal sentiment drift detector
+# ---------------------------------------------------------------------------
+def detect_sentiment_drift(
+    df: pd.DataFrame,
+    window_days: int = 14,
+    threshold: float = 0.15,
+    date_col: str = "published_at",
+    score_col: str = "vader_compound",
+    group_col: str = "channel_title",
+) -> pd.DataFrame:
+    """
+    Detect significant shifts in rolling mean sentiment over time.
+
+    Flags periods where the rolling average compound score changes by
+    more than ``threshold`` relative to the prior window — a signal that
+    a political event or viral moment has shifted audience tone.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Comments DataFrame with sentiment scores and timestamps.
+    window_days : int
+        Rolling window size in days.
+    threshold : float
+        Minimum absolute shift in compound score to flag as a drift event.
+    date_col : str
+        Column name for comment timestamp.
+    score_col : str
+        Column name for sentiment score.
+    group_col : str
+        Column to stratify by (e.g. channel_title).
+
+    Returns
+    -------
+    DataFrame of detected drift events with columns:
+    channel_title, date, rolling_mean, prior_mean, delta, drift_flagged.
+    """
+    df = df.copy()
+    df["_date"] = pd.to_datetime(df[date_col]).dt.date
+
+    records = []
+    for channel, grp in df.groupby(group_col):
+        daily = (
+            grp.groupby("_date")[score_col]
+            .mean()
+            .reset_index()
+            .sort_values("_date")
+            .rename(columns={"_date": "date", score_col: "daily_mean"})
+        )
+        daily["rolling_mean"] = daily["daily_mean"].rolling(window_days, min_periods=1).mean()
+        daily["prior_mean"] = daily["rolling_mean"].shift(window_days)
+        daily["delta"] = (daily["rolling_mean"] - daily["prior_mean"]).abs()
+        daily["drift_flagged"] = daily["delta"] >= threshold
+        daily[group_col] = channel
+        records.append(daily)
+
+    result = pd.concat(records, ignore_index=True) if records else pd.DataFrame()
+    n_events = result["drift_flagged"].sum() if not result.empty else 0
+    logger.info(f"Drift detection complete: {n_events} event(s) flagged.")
+    return result

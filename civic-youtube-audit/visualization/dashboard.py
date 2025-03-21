@@ -386,3 +386,54 @@ def plot_keyword_sentiment_heatmap(
     fig.update_layout(**LAYOUT_BASE)
     _save(fig, output_path)
     return fig
+
+
+# ---------------------------------------------------------------------------
+# 8. Sentiment drift timeline
+# ---------------------------------------------------------------------------
+def plot_sentiment_drift(
+    drift_df: pd.DataFrame,
+    channel_col: str = "channel_title",
+    output_path: str = "outputs/sentiment_drift.html",
+) -> go.Figure:
+    """
+    Visualise rolling sentiment with drift events flagged as markers.
+
+    Complements detect_sentiment_drift() — plots the rolling mean line
+    with red diamond markers at flagged drift points.
+    """
+    fig = go.Figure()
+
+    for channel, grp in drift_df.groupby(channel_col):
+        grp = grp.sort_values("date")
+        fig.add_trace(
+            go.Scatter(
+                x=grp["date"],
+                y=grp["rolling_mean"],
+                mode="lines",
+                name=channel,
+                line=dict(width=2),
+            )
+        )
+        flagged = grp[grp["drift_flagged"] == True]
+        if not flagged.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=flagged["date"],
+                    y=flagged["rolling_mean"],
+                    mode="markers",
+                    marker=dict(symbol="diamond", size=10, color=PALETTE["negative"]),
+                    name=f"{channel} — drift event",
+                    showlegend=True,
+                )
+            )
+
+    fig.add_hline(y=0, line_dash="dash", line_color="grey", opacity=0.4)
+    fig.update_layout(
+        title="Sentiment Drift Detection — Rolling Mean with Flagged Events",
+        xaxis_title="Date",
+        yaxis_title="Rolling Mean Compound Score",
+        **LAYOUT_BASE,
+    )
+    _save(fig, output_path)
+    return fig
