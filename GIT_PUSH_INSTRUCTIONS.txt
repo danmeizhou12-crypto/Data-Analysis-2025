@@ -1,0 +1,155 @@
+# Git Push & Pull Request Instructions
+# Data-Analysis-2025 → danmeizhou12-crypto/Data-Analysis-2025
+
+=======================================================================
+STEP 1 — One-time setup (if you haven't already)
+=======================================================================
+
+Install GitHub CLI (easiest auth method):
+  https://cli.github.com/
+
+Then authenticate:
+  gh auth login
+
+Or use a Personal Access Token (classic):
+  Settings → Developer settings → Personal access tokens → Generate new token
+  Scopes required: repo (full control)
+
+=======================================================================
+STEP 2 — Clone the empty remote repo and copy files in
+=======================================================================
+
+  git clone https://github.com/danmeizhou12-crypto/Data-Analysis-2025.git
+  cd Data-Analysis-2025
+
+Now copy all the generated files from this download into that folder.
+The folder structure should look like:
+
+  Data-Analysis-2025/
+  ├── .gitignore
+  ├── README.md
+  ├── CHANGELOG.md
+  ├── civic-youtube-audit/
+  │   ├── README.md
+  │   ├── pipeline.py
+  │   ├── requirements.txt
+  │   ├── etl/youtube_client.py
+  │   ├── cleaning/cleaner.py
+  │   ├── sentiment/analyzer.py
+  │   ├── visualization/dashboard.py
+  │   └── data/
+  │       ├── raw/        (CSV + Parquet + README)
+  │       └── processed/  (CSV + Parquet + README)
+  ├── docs/
+  │   ├── README.md
+  │   └── pipeline_design.md
+  └── notebooks/
+      └── README.md
+
+=======================================================================
+STEP 3 — Initial commit to main
+=======================================================================
+
+  git checkout -b main
+  git add -A
+  git commit -m "feat: initial commit — civic YouTube audit pipeline
+
+  - ETL pipeline: YouTube Data API v3 client with paginated extraction
+  - Cleaning layer: cross-platform schema normalisation + text preprocessing
+  - Sentiment layer: VADER + HuggingFace transformer ensemble
+  - Visualization: 6 Plotly dashboard figures
+  - Data: synthetic demo data (80 videos, 1,214 cleaned comments)
+  - Docs: pipeline design rationale, data dictionaries"
+
+  git push -u origin main
+
+=======================================================================
+STEP 4 — Create a feature branch (Pull Request)
+=======================================================================
+
+  git checkout -b feature/sentiment-enhancements
+
+Now make a small, meaningful change on this branch so the PR is real.
+For example, open sentiment/analyzer.py and update the docstring on
+SentimentPipeline, or add a new aggregate to sentiment_summary().
+
+A simple real change to make (copy-paste into terminal):
+
+  python3 -c "
+  # Append a language-stratified summary function to analyzer.py
+  code = '''
+
+def sentiment_by_language(df: pd.DataFrame) -> pd.DataFrame:
+    \"\"\"
+    Convenience wrapper: sentiment summary stratified by language.
+    Useful for EN vs. FR civic framing comparisons.
+    \"\"\"
+    return sentiment_summary(df, group_by=[\"channel_title\", \"language_detected\"])
+  '''
+  with open('civic-youtube-audit/sentiment/analyzer.py', 'a') as f:
+      f.write(code)
+  print('Done.')
+  "
+
+Then stage and commit:
+
+  git add civic-youtube-audit/sentiment/analyzer.py CHANGELOG.md
+  git commit -m "feat(sentiment): add language-stratified sentiment summary
+
+  Adds sentiment_by_language() — a convenience wrapper around
+  sentiment_summary() that groups by both channel_title and
+  language_detected. Supports EN vs. FR civic framing comparisons
+  central to the Canadian Civic Influence Project research goals."
+
+  git push -u origin feature/sentiment-enhancements
+
+=======================================================================
+STEP 5 — Open the Pull Request
+=======================================================================
+
+Via GitHub CLI (recommended):
+
+  gh pr create \
+    --base main \
+    --head feature/sentiment-enhancements \
+    --title "feat(sentiment): language-stratified sentiment summary" \
+    --body "## Summary
+  Adds \`sentiment_by_language()\` — a grouped sentiment aggregation
+  stratified by both channel and detected language (EN/FR).
+
+  ## Motivation
+  The Canadian Civic Influence Project requires comparing audience
+  sentiment across Anglophone and Francophone audiences. This function
+  makes that aggregation a one-liner for downstream analysis.
+
+  ## Changes
+  - \`sentiment/analyzer.py\`: new \`sentiment_by_language()\` function
+  - \`CHANGELOG.md\`: updated unreleased section
+
+  ## Testing
+  Verified against demo data: correct grouping on both channels and
+  both language labels. No breaking changes to existing functions."
+
+Or via the GitHub web UI:
+  1. Go to https://github.com/danmeizhou12-crypto/Data-Analysis-2025
+  2. Click "Compare & pull request" on the yellow banner
+  3. Set base: main ← compare: feature/sentiment-enhancements
+  4. Paste the body above, submit
+
+=======================================================================
+STEP 6 — Merge the PR
+=======================================================================
+
+After reviewing on GitHub, merge via:
+  gh pr merge --squash --delete-branch
+
+Or click "Squash and merge" on the GitHub PR page.
+
+=======================================================================
+TIPS
+=======================================================================
+
+- Use squash merges to keep main history clean (one commit per feature)
+- Branch naming convention used here: feature/, fix/, docs/, chore/
+- Always write commit messages in imperative mood: "add X", not "added X"
+- The CHANGELOG.md tracks what goes in each PR — update it per branch
